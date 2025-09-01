@@ -1,0 +1,211 @@
+version: '3.8'
+
+services:
+  # Main application
+  spotify-bot:
+    build: .
+    container_name: spotify-app-agent
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    networks:
+      - spotify-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import app; print('Healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Web dashboard
+  dashboard:
+    build: .
+    container_name: spotify-dashboard
+    restart: unless-stopped
+    command: python tools/web_dashboard.py
+    ports:
+      - "5001:5001"
+    environment:
+      - TZ=America/New_York
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    networks:
+      - spotify-network
+    depends_on:
+      - spotify-bot
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development environment
+  dev:
+    build: .
+    container_name: spotify-dev
+    restart: "no"
+    command: tail -f /dev/null
+    environment:
+      - TZ=America/New_York
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - spotify-network
+    working_dir: /app
+
+  # Testing environment
+  test:
+    build: .
+    container_name: spotify-test
+    restart: "no"
+    command: pytest -v --cov=app --cov=tools --cov-report=html --cov-report=term
+    environment:
+      - TZ=America/New_York
+      - TESTING=true
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - spotify-network
+    working_dir: /app
+
+  # Linting and code quality
+  lint:
+    build: .
+    container_name: spotify-lint
+    restart: "no"
+    command: |
+      sh -c "
+        black --check .
+        isort --check-only .
+        flake8 .
+        mypy app/ tools/ --ignore-missing-imports
+        bandit -r app/ tools/
+      "
+    volumes:
+      - .:/app
+    networks:
+      - spotify-network
+    working_dir: /app
+
+  # Security scanning
+  security:
+    build: .
+    container_name: spotify-security
+    restart: "no"
+    command: |
+      sh -c "
+        safety check
+        bandit -r app/ tools/ -f json -o bandit-report.json
+        echo 'Security scan complete'
+      "
+    volumes:
+      - .:/app
+    networks:
+      - spotify-network
+    working_dir: /app
+
+  # Database (SQLite in volume, but could be PostgreSQL)
+  database:
+    image: postgres:15-alpine
+    container_name: spotify-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spotify_bot
+      POSTGRES_USER: spotify_user
+      POSTGRES_PASSWORD: spotify_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - spotify-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spotify_user -d spotify_bot"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: spotify-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - spotify-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: spotify-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - spotify-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: spotify-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - spotify-network
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  spotify-network:
+    driver: bridge

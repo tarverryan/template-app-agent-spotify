@@ -1,0 +1,115 @@
+# config/config.yaml
+app:
+  tz: "America/New_York"  # Change to your timezone
+  minimal_change_threshold_pct: 0
+  snapshot_dir: "/app/snapshots"
+  state_dir: "/app/state"
+  logs_dir: "/app/logs"
+
+persona:
+  name: "Your Bot Name"  # Change to your bot's name
+  prefix: "Your Bot's "  # Change to your bot's prefix
+  bio: "Your bot's description"  # Change to your bot's bio
+
+playlists:
+  # Example playlist configurations - customize these for your needs
+  # You can add, remove, or modify playlist types as needed
+  
+  playlist1:
+    id: "your-playlist1-id"  # Replace with your playlist ID
+    size: 50
+    artist_cap: 1
+    dedupe_days: 1  # Only previous day
+    schedule_cron: "0 4 * * *"     # 04:00 daily
+    active: true
+    logic: "previous_day"  # Logic type for track selection
+    
+  playlist2:
+    id: "your-playlist2-id"  # Replace with your playlist ID
+    size: 100
+    artist_cap: 2
+    dedupe_days: 7  # Previous week
+    schedule_cron: "0 4 * * 6"     # 04:00 Saturday (previous week)
+    active: true
+    logic: "previous_week"  # Logic type for track selection
+    
+  playlist3:
+    id: "your-playlist3-id"  # Replace with your playlist ID
+    size: 200
+    artist_cap: 2
+    dedupe_months: 1  # Current month only
+    schedule_cron: "0 4 * * 6"     # 04:00 Saturday (month-to-date)
+    active: true
+    logic: "month_to_date"  # Logic type for track selection
+    rollover:
+      rename_final: true
+      final_suffix: " (Final)"
+      
+  playlist4:
+    id: "your-playlist4-id"  # Replace with your playlist ID
+    size: 250
+    artist_cap: 2
+    dedupe_years: 1  # Current year only
+    schedule_cron: "0 4 1 * *"     # 04:00 on 1st of month (year-to-date)
+    active: true
+    logic: "year_to_date"  # Logic type for track selection
+    rollover:
+      rename_final: true
+      final_suffix: " (Final)"
+      seed_with_recent_weeks: 3
+
+selection:
+  territory_weighting:
+    US: 0.7
+    Global: 0.3
+  adaptive_allocation: true
+  diversity_floor_pct: 3   # Minimum genre diversity percentage
+  artist_caps:
+    playlist1: 1
+    playlist2: 2
+    playlist3: 2
+    playlist4: 2
+  dominant_artist_override:
+    enabled: true
+    max_tracks_per_period: 3
+    cooling_days: 7
+  date_filtering:
+    enabled: true
+    previous_day_hours: 24
+    previous_week_days: 7
+    month_to_date: true
+    year_to_date: true
+
+genres:
+  buckets:
+    Pop: ["pop", "indie pop", "dance pop", "electropop"]
+    HipHop: ["hip hop", "rap", "trap", "emo rap"]
+    Latin: ["latin", "reggaeton", "regional mexican", "urbano latino"]
+    EDM: ["edm", "dance", "house", "deep house", "progressive house", "techno"]
+    RockAlt: ["rock", "alternative rock", "indie rock", "hard rock", "punk"]
+    Country: ["country", "contemporary country"]
+    RnB: ["r&b", "soul", "neo soul"]
+    Afrobeats: ["afrobeats", "afropop"]
+    KPop: ["k-pop", "korean pop"]
+    Other: ["singer-songwriter", "folk", "j-pop", "metal"]
+
+scoring:
+  weights:
+    popularity: 0.55
+    popularity_delta: 0.30
+    recency_boost: 0.10
+    audio_feature_fit: 0.05
+  recency_days: 60
+  target_audio:
+    min_energy: 0.4
+    max_energy: 0.9
+    min_danceability: 0.4
+
+seeding:
+  # Configuration for seeding playlists from other playlists
+  playlist3:
+    top_playlist1: 25
+    top_playlist2: 50
+  playlist4:
+    top_playlist1: 25
+    top_playlist2: 50

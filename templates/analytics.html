@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Spotify Bot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1DB954 0%, #191414 100%);">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fab fa-spotify me-2"></i>
+                Spotify Bot Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/config">Configuration</a>
+                <a class="nav-link active" href="/analytics">Analytics</a>
+                <a class="nav-link" href="/logs">Logs</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2><i class="fas fa-chart-line fa-fw me-2"></i>Analytics Dashboard</h2>
+                <p class="text-muted">Comprehensive analytics and insights for your Spotify bot</p>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-tachometer-alt fa-fw me-2"></i>Performance Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-music fa-fw me-2"></i>Genre Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="genreChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popularity Trends -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-area fa-fw me-2"></i>Popularity Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="popularityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Playlist Analytics -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-list fa-fw me-2"></i>Playlist Analytics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="playlistAnalytics">
+                            <p class="text-muted">Loading playlist analytics...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load analytics data
+        fetch('/api/analytics/detailed')
+        .then(response => response.json())
+        .then(data => {
+            // Performance Chart
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            new Chart(performanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Success Rate', 'Failed Runs', 'Successful Runs'],
+                    datasets: [{
+                        label: 'Performance Metrics',
+                        data: [
+                            data.performance.success_rate || 0,
+                            data.performance.failed_runs || 0,
+                            data.performance.successful_runs || 0
+                        ],
+                        backgroundColor: ['#28a745', '#dc3545', '#17a2b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Genre Chart
+            const genreCtx = document.getElementById('genreChart').getContext('2d');
+            if (data.genres && data.genres.overall_genre_distribution) {
+                const genres = Object.keys(data.genres.overall_genre_distribution).slice(0, 10);
+                const counts = Object.values(data.genres.overall_genre_distribution).slice(0, 10);
+                
+                new Chart(genreCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: genres,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                                '#4BC0C0', '#FF6384'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Popularity Chart
+            const popularityCtx = document.getElementById('popularityChart').getContext('2d');
+            if (data.popularity && data.popularity.overall_popularity) {
+                const dates = Object.keys(data.popularity.overall_popularity);
+                const values = Object.values(data.popularity.overall_popularity);
+                
+                new Chart(popularityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [{
+                            label: 'Average Popularity',
+                            data: values,
+                            borderColor: '#1DB954',
+                            backgroundColor: 'rgba(29, 185, 84, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Playlist Analytics
+            const playlistDiv = document.getElementById('playlistAnalytics');
+            if (data.playlists && Object.keys(data.playlists).length > 0) {
+                let html = '<div class="row">';
+                for (const [playlistKey, playlistData] of Object.entries(data.playlists)) {
+                    html += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>${playlistKey}</h6>
+                                    <p>Average Popularity: ${playlistData.avg_popularity?.toFixed(1) || 'N/A'}</p>
+                                    <p>Average Track Count: ${playlistData.avg_track_count?.toFixed(0) || 'N/A'}</p>
+                                    <p>Total Snapshots: ${playlistData.total_snapshots || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                playlistDiv.innerHTML = html;
+            } else {
+                playlistDiv.innerHTML = '<p class="text-muted">No playlist data available</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading analytics:', error);
+            document.getElementById('playlistAnalytics').innerHTML = 
+                '<div class="alert alert-danger">Error loading analytics data</div>';
+        });
+    </script>
+</body>
+</html>

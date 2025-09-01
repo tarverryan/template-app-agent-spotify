@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs - Spotify Bot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .log-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            padding: 2px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+        .log-info { color: #17a2b8; }
+        .log-debug { color: #6c757d; }
+        #log-container {
+            height: 600px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 15px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #1DB954 0%, #191414 100%);">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fab fa-spotify me-2"></i>
+                Spotify Bot Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link" href="/config">Configuration</a>
+                <a class="nav-link" href="/analytics">Analytics</a>
+                <a class="nav-link active" href="/logs">Logs</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-file-alt fa-fw me-2"></i>Bot Logs</h4>
+                        <div>
+                            <button class="btn btn-primary btn-sm" onclick="loadLogs()">
+                                <i class="fas fa-refresh me-1"></i>Refresh
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="toggleAutoRefresh()">
+                                <i class="fas fa-play me-1"></i>Auto-refresh
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearLogs()">
+                                <i class="fas fa-trash me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="logLines" class="form-label">Number of lines:</label>
+                                <select id="logLines" class="form-select" onchange="loadLogs()">
+                                    <option value="50">50 lines</option>
+                                    <option value="100" selected>100 lines</option>
+                                    <option value="200">200 lines</option>
+                                    <option value="500">500 lines</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="logFilter" class="form-label">Filter:</label>
+                                <select id="logFilter" class="form-select" onchange="filterLogs()">
+                                    <option value="all">All logs</option>
+                                    <option value="error">Errors only</option>
+                                    <option value="warning">Warnings only</option>
+                                    <option value="info">Info only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="logSearch" class="form-label">Search:</label>
+                                <input type="text" id="logSearch" class="form-control" placeholder="Search logs..." onkeyup="searchLogs()">
+                            </div>
+                        </div>
+                        <div id="log-container">
+                            <p class="text-muted">Loading logs...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let autoRefreshInterval = null;
+        let allLogs = [];
+
+        function loadLogs() {
+            const lines = document.getElementById('logLines').value;
+            const container = document.getElementById('log-container');
+            
+            fetch(`/api/logs?lines=${lines}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    container.innerHTML = `<div class="alert alert-warning">${data.error}</div>`;
+                    return;
+                }
+                
+                allLogs = data.logs || [];
+                displayLogs(allLogs);
+            })
+            .catch(error => {
+                container.innerHTML = `<div class="alert alert-danger">Error loading logs: ${error}</div>`;
+            });
+        }
+
+        function displayLogs(logs) {
+            const container = document.getElementById('log-container');
+            const filter = document.getElementById('logFilter').value;
+            const search = document.getElementById('logSearch').value.toLowerCase();
+            
+            let filteredLogs = logs;
+            
+            // Apply filter
+            if (filter !== 'all') {
+                filteredLogs = logs.filter(log => log.toLowerCase().includes(filter));
+            }
+            
+            // Apply search
+            if (search) {
+                filteredLogs = filteredLogs.filter(log => log.toLowerCase().includes(search));
+            }
+            
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<p class="text-muted">No logs found</p>';
+                return;
+            }
+            
+            let html = '';
+            filteredLogs.forEach(log => {
+                let logClass = 'log-info';
+                if (log.toLowerCase().includes('error')) logClass = 'log-error';
+                else if (log.toLowerCase().includes('warning')) logClass = 'log-warning';
+                else if (log.toLowerCase().includes('debug')) logClass = 'log-debug';
+                
+                html += `<div class="log-entry ${logClass}">${escapeHtml(log)}</div>`;
+            });
+            
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function filterLogs() {
+            displayLogs(allLogs);
+        }
+
+        function searchLogs() {
+            displayLogs(allLogs);
+        }
+
+        function toggleAutoRefresh() {
+            const button = event.target;
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                button.innerHTML = '<i class="fas fa-play me-1"></i>Auto-refresh';
+                button.className = 'btn btn-success btn-sm';
+            } else {
+                autoRefreshInterval = setInterval(loadLogs, 5000);
+                button.innerHTML = '<i class="fas fa-pause me-1"></i>Stop';
+                button.className = 'btn btn-warning btn-sm';
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('log-container').innerHTML = '<p class="text-muted">Logs cleared</p>';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load logs on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLogs();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+# config/config.yaml.example
+app:
+  tz: "America/New_York"  # Change to your timezone
+  minimal_change_threshold_pct: 0
+  snapshot_dir: "/app/snapshots"
+  state_dir: "/app/state"
+  logs_dir: "/app/logs"
+
+persona:
+  name: "Your Bot Name"  # Change to your bot's name
+  prefix: "Your Bot's "  # Change to your bot's prefix
+  bio: "Your bot's description"  # Change to your bot's bio
+
+playlists:
+  daily:
+    id: "your-daily-playlist-id"  # Replace with your playlist ID
+    size: 50
+    artist_cap: 1
+    dedupe_days: 7
+    schedule_cron: "0 4 * * *"     # 04:00 daily
+    active: true
+  weekly:
+    id: "your-weekly-playlist-id"  # Replace with your playlist ID
+    size: 100
+    artist_cap: 2
+    dedupe_days: 28
+    schedule_cron: "0 4 * * 5"     # 04:00 Friday
+    active: true
+  monthly:
+    id: "your-monthly-playlist-id"  # Replace with your playlist ID
+    size: 200
+    artist_cap: 2
+    dedupe_months: 2
+    schedule_cron: "10 4 1 * *"    # 04:10 on day 1 (freeze/roll)
+    active: true
+    rollover:
+      rename_final: true
+      final_suffix: " (Final)"
+  yearly:
+    id: "your-yearly-playlist-id"  # Replace with your playlist ID
+    size: 250
+    artist_cap: 2
+    dedupe_years: 1
+    schedule_cron: "15 4 1 1 *"    # 04:15 on Jan 1 (freeze/roll)
+    active: true
+    rollover:
+      rename_final: true
+      final_suffix: " (Final)"
+      seed_with_recent_weeks: 3
+
+selection:
+  territory_weighting:
+    US: 0.7
+    Global: 0.3
+  adaptive_allocation: true
+  diversity_floor_pct: 3   # Yearly only (toggle in code if needed)
+  artist_caps:
+    daily: 1
+    weekly: 2
+    monthly: 2
+    yearly: 2
+  dominant_artist_override:
+    enabled: true
+    max_tracks_per_period: 3
+    cooling_days: 7
+
+genres:
+  buckets:
+    Pop: ["pop", "indie pop", "dance pop", "electropop"]
+    HipHop: ["hip hop", "rap", "trap", "emo rap"]
+    Latin: ["latin", "reggaeton", "regional mexican", "urbano latino"]
+    EDM: ["edm", "dance", "house", "deep house", "progressive house", "techno"]
+    RockAlt: ["rock", "alternative rock", "indie rock", "hard rock", "punk"]
+    Country: ["country", "contemporary country"]
+    RnB: ["r&b", "soul", "neo soul"]
+    Afrobeats: ["afrobeats", "afropop"]
+    KPop: ["k-pop", "korean pop"]
+    Other: ["singer-songwriter", "folk", "j-pop", "metal"]
+
+scoring:
+  weights:
+    popularity: 0.55
+    popularity_delta: 0.30
+    recency_boost: 0.10
+    audio_feature_fit: 0.05
+  recency_days: 60
+  target_audio:
+    min_energy: 0.4
+    max_energy: 0.9
+    min_danceability: 0.4
+    max_danceability: 0.9
+
+seeding:
+  monthly:
+    top_daily: 25
+    top_weekly: 50
+  yearly:
+    top_daily: 25
+    top_weekly: 50

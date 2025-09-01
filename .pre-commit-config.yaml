@@ -1,0 +1,95 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-json
+      - id: check-toml
+      - id: debug-statements
+      - id: name-tests-test
+      - id: requirements-txt-fixer
+
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-PyYAML]
+        args: [--ignore-missing-imports]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, app/, tools/]
+        exclude: ^tests/
+
+  - repo: https://github.com/PyCQA/safety
+    rev: 2.3.5
+    hooks:
+      - id: safety
+        args: [check, --json, --output, safety-report.json]
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.9.0
+    hooks:
+      - id: pyupgrade
+        args: [--py39-plus]
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0
+    hooks:
+      - id: prettier
+        types_or: [yaml, json, markdown]
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.35.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+
+  - repo: local
+    hooks:
+      - id: check-template-setup
+        name: Check Template Setup
+        entry: bash -c 'grep -q "yourusername" pyproject.toml && echo "⚠️  Remember to update yourusername in pyproject.toml" || true'
+        language: system
+        pass_filenames: false
+        stages: [commit]
+
+      - id: check-env-example
+        name: Check Environment Example
+        entry: bash -c 'test -f docs/user_guides/env.example && echo "✅ env.example exists" || echo "❌ env.example missing"'
+        language: system
+        pass_filenames: false
+        stages: [commit]
+
+      - id: check-security-md
+        name: Check Security Documentation
+        entry: bash -c 'test -f SECURITY.md && echo "✅ SECURITY.md exists" || echo "❌ SECURITY.md missing"'
+        language: system
+        pass_filenames: false
+        stages: [commit]
